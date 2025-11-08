@@ -1,60 +1,72 @@
 import requests
-import playsound
-from mutagen.mp3 import MP3
-import time
-import os
-api_key = os.getenv("TALKBOT_API_KEY")
-api_url = "https://api.talkbot.ir/v1/media/text-to-speech/REQ"
-file_name = "Say.mp3"
-headers = {
-    'Authorization': f'Bearer {api_key}'
-}
-with open("to_say.txt", "r", encoding="utf-8") as f:
-    text=f.read()
+import sys
+from config import TALKBOT_API_URL , TALKBOT_API_KEY
 
-data = {
-    'text': text,
-    'server': 'farsi',
-    'sound': '3'
-}
+def speak_text_from_file(input_file = "to_say.txt"):
 
-try:
-    response = requests.post(api_url, headers=headers, data=data)
+    api_key = TALKBOT_API_KEY
+    api_url = TALKBOT_API_URL
+    file_name = "Say.mp3"
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}'
+    }
 
-    if response.status_code == 200:
-        
-        json_data = response.json()
-        
-        try:
-            download_url = json_data['response']['download']
+    try:
+        with open(input_file, "r", encoding="utf-8") as f:
+            text = f.read()
+            if not text.strip():
+                print(f"Warning: The file '{input_file}' is empty. Nothing to say.")
+                sys.exit(0)
+    except FileNotFoundError:
+        print(f"Error: The input file '{input_file}' was not found.")
+        sys.exit(1)
+    
+    data = {
+        'text': text,
+        'server': 'farsi',
+        'sound': '3'
+    }
+
+    print("Sending request to generate audio...")
+    
+    try:
+        response = requests.post(api_url, headers=headers, data=data)
+
+        if response.status_code == 200:
+            json_data = response.json()
             
-            print(f"Download link :{download_url}")
+            try:
+                download_url = json_data['response']['download']
+                print(f"Download link: {download_url}")
 
-            audio_response = requests.get(download_url)
-            
-            if audio_response.status_code == 200:
-                with open(file_name, 'wb') as f:
-                    f.write(audio_response.content)
-                try:
-                    audio_info = MP3(file_name)
-                    duration_seconds = audio_info.info.length
-                    playsound.playsound(file_name)
-                    time.sleep(duration_seconds + 1)
-                    print("Playback finished.")
-                except Exception as e:
-                    print(f"⚠️ Error playing file: {e}")
-                    print("Note: On Linux, you might need to install 'GStreamer' or 'PyGObject'.") 
-                print(f"✅ Audio file successfully saved as '{file_name}'.")
-            else:
-                print(f"Error downloading audio file. Status code: {audio_response.status_code}")
+                audio_response = requests.get(download_url)
+                
+                if audio_response.status_code == 200:
+                    with open(file_name, 'wb') as f:
+                        f.write(audio_response.content)
+                    
+                    print(f"✅ Audio file successfully saved as '{file_name}'.")    
+                    return True        
+                else:
+                    print(f"Error downloading audio file. Status code: {audio_response.status_code}")
+                    return False
 
-        except KeyError:
-            print("Error: Received JSON structure does not match expected format. Download link not found.")
-            print(f"Received response: {json_data}") 
-            
-    else:
-        print(f"Error sending initial request. Status code: {response.status_code}") 
-        print(f"Error message: {response.text}") 
+            except KeyError:
+                print("Error: Received JSON structure does not match expected format.")
+                print(f"Received response: {json_data}") 
+                return False
 
-except requests.exceptions.RequestException as e:
-    print(f"Error connecting to API: {e}")
+                
+        else:
+            print(f"Error sending initial request. Status code: {response.status_code}") 
+            print(f"Error message: {response.text}") 
+            return False
+
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error connecting to API: {e}")
+        return False
+
+if __name__ == "__main__":
+    speak_text_from_file()
