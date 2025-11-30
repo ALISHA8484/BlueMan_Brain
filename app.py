@@ -6,10 +6,9 @@ import Agent
 import RAG
 from Text_to_Speech import speak_text_from_file
 import streamlit_mic_recorder as mic_recorder
-# ما دیگر به تابع speak_text_from_file نیازی نداریم
+
 
 def write_to_say(context):
-    """متن پاسخ را در فایل to_say.txt می‌نویسد."""
     try:
         with open("to_say.txt", "w", encoding="utf-8") as f:
             f.write(context)
@@ -19,7 +18,6 @@ def write_to_say(context):
 
 @st.cache_resource
 def initial_setup():
-    """RAG را راه‌اندازی می‌کند و مدل امبدینگ را بارگذاری می‌کند."""
     print("--- ONE-TIME SETUP ---")
     print("Running RAG ingestion...")
     RAG.run_ingestion()
@@ -28,11 +26,9 @@ def initial_setup():
     print("--- Setup Complete ---")
     return embeddings
 
-# --- راه‌اندازی اصلی برنامه ---
 st.set_page_config(page_title="دستیار رباتیک IUT", layout="centered")
 st.title("🤖 دستیار مسابقات رباتیک IUT")
 
-# اجرای راه‌اندازی اولیه (ساخت دیتابیس و...)
 embedding_model = initial_setup()
 
 if "messages" not in st.session_state:
@@ -72,13 +68,10 @@ if st.button("🎙️ برای پرسیدن سوال کلیک کنید (یا ن�
             elif route == "GENERAL":
                 final_answer = Agent.generate_general_answer(user_question)
 
-        # 3. تولید فایل صوتی
+        
         with st.spinner("💬 در حال آماده‌سازی صدا..."):
             write_to_say(final_answer)
-            # از تابع جدیدی که ساختیم استفاده می‌کنیم
             generation_success = speak_text_from_file() 
-        
-        # 4. نمایش پاسخ نهایی (ویدیو و صدا)
         if generation_success:
             video_file = "Cute_Robot.mp4"
             audio_file = "Say.mp3"
@@ -86,9 +79,9 @@ if st.button("🎙️ برای پرسیدن سوال کلیک کنید (یا ن�
             with st.chat_message("assistant"):
                 st.markdown(final_answer)
                 st.video(video_file, loop=True, autoplay=True, muted=True) # ویدیو (بی‌صدا)
-                st.audio(audio_file, autoplay=True) # صدا
+                st.audio(audio_file, autoplay=True)
             
-            # اضافه کردن به تاریخچه (همراه با ویدیو و صدا)
+            
             st.session_state.messages.append({
                 "role": "assistant", 
                 "content": final_answer,
